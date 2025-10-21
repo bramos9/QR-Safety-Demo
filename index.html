@@ -1,25 +1,264 @@
 <!doctype html>
-<html>
-<head><meta charset="utf-8"><title>QR Demo — Is this safe?</title></head>
-<body style="font-family:system-ui, Arial; max-width:700px; margin:40px;">
-  <h1>What just happened?</h1>
-  <p>You scanned a QR that pointed to a short URL. Short URLs hide the final destination which make it easier for attackers to trick user.</p>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>QR Demo — Halloween Hack Simulation → Safety</title>
+<style>
+  /* Basic reset */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
 
-  <h2>Link preview</h2>
-  <p>Short URL: <strong>tinyurl.com/4ty9ccjk</strong></p>
-  <p>Final URL: <strong>https://bramos9.github.io/QR-Safety-Demo/</strong></p>
+  html,body { height: 100%; font-family: "Trebuchet MS", Arial, sans-serif; background:#000; color:#fff; }
 
-  <h2>How to check QR safety</h2>
-  <ul>
-    <li>Preview the link before opening (long-press on many phones or use a link preview app).</li>
-    <li>Look for HTTPS, domain spelling, and unexpected domains.</li>
-    <li>Don’t enter credentials or personal info into a suspicious link.</li>
-  </ul>
+  /* FULLSCREEN FAKE HACK LAYER */
+  #hackScreen {
+    position: fixed; inset: 0; z-index: 9999;
+    background: radial-gradient(ellipse at center, rgba(60,0,0,0.9) 0%, rgba(0,0,0,0.95) 60%);
+    display: flex; flex-direction: column; align-items:center; justify-content:flex-start;
+    padding: 30px; gap:18px; overflow:hidden;
+  }
+  .alarm {
+    width:100%; text-align:center; font-weight:700; letter-spacing:2px;
+    color:#ffeded; background:linear-gradient(90deg,#ff0033,#ff7518);
+    padding:10px 12px; border-radius:6px; box-shadow:0 6px 30px rgba(255,50,50,0.2);
+    animation: pulse 1s infinite;
+  }
+  @keyframes pulse {
+    0% { transform: scale(1); box-shadow: 0 6px 30px rgba(255,50,50,0.15);}
+    50% { transform: scale(1.03); box-shadow: 0 12px 50px rgba(255,80,50,0.3);}
+    100% { transform: scale(1); box-shadow: 0 6px 30px rgba(255,50,50,0.15);}
+  }
 
-  <h2>Want next steps?</h2>
-  <p style="text-align:center;">
-  <img src="club-linktree.png" alt="Cyber Force One (CF1) Club QR" width="250"><br>
-  <strong>Scan this QR to join our Cybersecurity Club!</strong></p>
-  <p style="text-align:center;"><strong>Or use the link! https://linktr.ee/testing808</strong></p>
+  .large {
+    font-size: min(6vw,48px); color:#ffb3b3; text-shadow: 0 4px 30px rgba(255,50,50,0.45);
+    margin-top:18px;
+  }
+
+  /* fake console text */
+  #console {
+    width: 90%; max-width:1000px; background: rgba(0,0,0,0.65); border:1px solid rgba(255,120,0,0.12);
+    padding: 16px; border-radius: 8px; font-family: monospace; font-size: 14px; color:#fefefe;
+    height: 180px; overflow:auto;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.02);
+  }
+  .console-line { opacity:0; transform: translateY(6px); animation: lineIn 0.6s forwards; }
+  @keyframes lineIn { to { opacity:1; transform:none; } }
+
+  /* fake modal/popups */
+  .fake-modal {
+    position: absolute; background: #111; color:#fff; border:3px solid #ff7518; padding:14px;
+    width: 320px; border-radius:8px; box-shadow: 0 10px 40px rgba(0,0,0,0.7);
+    transform: translateY(-10px) scale(0.98); opacity:0; transition: all 280ms ease;
+  }
+  .fake-modal.show { transform:none; opacity:1; }
+
+  .modal-title { font-weight:700; color:#ffb3b3; margin-bottom:8px; }
+  .modal-body { font-size:13px; margin-bottom:10px; color:#ffecec; }
+
+  /* simulated "encrypted files" overlay */
+  .ransom {
+    position: absolute; inset: 0; display:flex; align-items:center; justify-content:center;
+    pointer-events:none; opacity:0; transition: opacity 900ms ease; text-align:center;
+  }
+  .ransom.show { opacity:1; pointer-events:auto; }
+  .ransom-card {
+    background: linear-gradient(180deg, rgba(10,0,0,0.75), rgba(0,0,0,0.85));
+    border: 2px dashed #ff7518; padding: 28px; border-radius: 10px; width: 88%;
+    max-width: 720px; color:#fff; box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+  }
+  .ransom-title { font-size: clamp(18px, 3.5vw, 36px); color:#ff6666; margin-bottom:12px; }
+  .ransom-text { color:#ffdede; line-height:1.4; margin-bottom:16px; }
+
+  /* dismiss button */
+  .btn {
+    display:inline-block; background:#ff7518; color:#111; padding:10px 14px; border-radius:8px; font-weight:700;
+    text-decoration:none; border:none; cursor:pointer;
+  }
+
+  /* HIDDEN educational content */
+  #edu {
+    display:none;
+    min-height:100vh; padding:40px; box-sizing:border-box;
+    background-color: #121212; color:#f5f5f5;
+    font-family: "Trebuchet MS", Arial, sans-serif;
+  }
+  #edu .card {
+    max-width:700px; margin:0 auto; padding:20px; border-radius:12px; border:2px solid #ff7518;
+    box-shadow: 0 0 20px rgba(255,117,24,0.2); background: linear-gradient(180deg, rgba(20,20,20,0.9), rgba(10,10,10,0.9));
+  }
+  #edu h1, #edu h2 { color:#ff7518; text-shadow: 2px 2px 4px #000; text-align:center; }
+  #edu p, #edu li { font-size:1.05rem; line-height:1.6; color:#f2f2f2; }
+  #edu ul { background: rgba(255, 117, 24, 0.06); padding:12px 18px; border-radius:8px; list-style-type: "🕸️ "; }
+
+  /* transition fade */
+  .fade-out { animation: fadeOut 700ms forwards; }
+  @keyframes fadeOut { to { opacity:0; transform:scale(0.99); visibility:hidden; } }
+  .fade-in { animation: fadeIn 700ms forwards; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+
+  /* small responsive tweaks */
+  @media (max-width:520px) {
+    .fake-modal { width: 86%; left:7%; }
+    #console { height: 110px; font-size:12px; }
+    .ransom-card { padding:18px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== Fake "You got hacked" full-screen stage ===== -->
+<div id="hackScreen" role="dialog" aria-label="Hack simulation">
+  <div class="alarm" id="alarmText">SECURITY ALERT — SYSTEM COMPROMISED</div>
+  <div class="large">!!! SYSTEM BREACH !!!</div>
+
+  <div id="console" aria-live="polite" aria-atomic="true">
+    <!-- lines appended by JS -->
+  </div>
+
+  <!-- fake modal placeholders -->
+  <div id="modal1" class="fake-modal" style="top:110px; left:40px;">
+    <div class="modal-title">Critical: Encryption detected</div>
+    <div class="modal-body">Important files have been encrypted. Click OK to attempt recovery.</div>
+    <div><button class="btn" onclick="closeModal('modal1')">OK</button></div>
+  </div>
+
+  <div id="modal2" class="fake-modal" style="top:220px; right:40px;">
+    <div class="modal-title">Windows Defender</div>
+    <div class="modal-body">Potentially unwanted program detected: STRANGE_PROCESS.exe</div>
+    <div><button class="btn" onclick="closeModal('modal2')">Ignore</button></div>
+  </div>
+
+  <!-- fake ransom screen overlay -->
+  <div id="ransom" class="ransom" aria-hidden="true">
+    <div class="ransom-card">
+      <div class="ransom-title">YOUR FILES ARE ENCRYPTED</div>
+      <div class="ransom-text">
+        All your important files have been encrypted. To recover them, send 0.5 BTC to the address below and email proof of payment.
+        <br><br><strong>BTC: 1FakeBitcoinAddressExample0000</strong>
+      </div>
+      <div style="text-align:center;">
+        <button class="btn" onclick="showEducation()">Show me how to stay safe</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- quick skip button -->
+  <div style="position:fixed; bottom:18px; right:18px;">
+    <button class="btn" onclick="showEducation()">Skip demo → Safety page</button>
+  </div>
+</div>
+
+<!-- ===== Hidden educational content (Halloween theme) ===== -->
+<div id="edu" aria-hidden="true">
+  <div class="card fade-in" id="eduCard">
+    <h1>🎃 What Just Happened? 👻</h1>
+    <p>You scanned a spooky QR code that pointed to a short URL. Short URLs can hide the final destination, a trick that attackers use to lure victims into unsafe sites. Don’t let the ghosts of bad links haunt your device!</p>
+
+    <h2>🕷️ Link Preview</h2>
+    <p>Short URL: <strong>tinyurl.com/4ty9ccjk</strong></p>
+    <p>Final URL: <strong><a href="https://bramos9.github.io/QR-Safety-Demo/" target="_blank" rel="noopener">https://bramos9.github.io/QR-Safety-Demo/</a></strong></p>
+
+    <h2>🕸️ How to Check QR Safety</h2>
+    <ul>
+      <li>Preview the link before opening (long-press on many phones or use a link preview app).</li>
+      <li>Look for HTTPS, correct domain spelling, and avoid unexpected websites.</li>
+      <li>Never enter credentials or personal info into suspicious links — even if they look legit.</li>
+    </ul>
+
+    <h2>💀 Want Next Steps?</h2>
+    <p class="center" style="text-align:center;">
+      <img src="club-linktree.png" alt="Club QR" width="250" style="border:3px solid #ff7518; border-radius:10px;">
+    </p>
+    <p style="text-align:center;">
+      <strong>🎃 Scan this QR to join our Cybersecurity Club! 🎃</strong><br>
+      <a href="https://linktr.ee/testing808" target="_blank" rel="noopener">https://linktr.ee/testing808</a>
+    </p>
+
+    <hr style="margin:28px auto; width:60%; border:1px solid #ff7518;">
+    <p style="text-align:center; color:#ffb84d;">🦇 Stay safe online! The scariest thing isn’t a haunted house, it’s a phishing attack! 🕯️</p>
+  </div>
+</div>
+
+<script>
+/* ====== Simulated console output lines (harmless) ====== */
+const consoleEl = document.getElementById('console');
+const lines = [
+  "[INIT] System check starting...",
+  "[WARN] Unusual network activity detected from 45.32.21.9",
+  "[ALERT] Privilege escalation attempt successful: user=guest",
+  "[SCAN] Searching for documents... 12 found, 7 encrypted",
+  "[ENCRYPT] /home/user/Documents/report.docx -> report.docx.locked",
+  "[ENCRYPT] /home/user/Photos/vacation.jpg -> vacation.jpg.locked",
+  "[ALERT] Ransom note created: README_RECOVER.txt",
+  "[NOTICE] Backing up logs to remote server...",
+  "[ERROR] Unable to contact remote backup (connection reset)",
+  "[COMPLETE] All targeted files encrypted. Awaiting instructions."
+];
+
+function revealConsoleLines(i=0){
+  if(i >= lines.length) return;
+  const line = document.createElement('div');
+  line.className = 'console-line';
+  line.style.animationDelay = (i*0.12) + 's';
+  line.textContent = lines[i];
+  consoleEl.appendChild(line);
+  consoleEl.scrollTop = consoleEl.scrollHeight;
+  // schedule next line
+  setTimeout(()=> revealConsoleLines(i+1), 600);
+}
+
+/* ====== Show modals and ransom overlay at timed intervals ====== */
+function showModal(id, delay=0) {
+  setTimeout(()=> {
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.classList.add('show');
+  }, delay);
+}
+
+function closeModal(id){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.classList.remove('show');
+}
+
+/* schedule events */
+window.onload = function(){
+  revealConsoleLines(0);
+  showModal('modal1', 1400);
+  showModal('modal2', 2800);
+  // ransom overlay after dramatic delay
+  setTimeout(()=> {
+    document.getElementById('ransom').classList.add('show');
+  }, 4500);
+  // auto transition to the education page after 12 seconds
+  setTimeout(()=> {
+    showEducation();
+  }, 12000);
+};
+
+/* ====== Transition to educational content ====== */
+let transitioned = false;
+function showEducation(){
+  if(transitioned) return;
+  transitioned = true;
+  // fade out hack screen
+  const hack = document.getElementById('hackScreen');
+  hack.classList.add('fade-out');
+  // after fade, hide and reveal edu content
+  setTimeout(()=> {
+    hack.style.display = 'none';
+    const edu = document.getElementById('edu');
+    edu.style.display = 'block';
+    // small delay for appearance
+    setTimeout(()=> edu.classList.add('fade-in'), 40);
+    // mark aria for accessibility
+    hack.setAttribute('aria-hidden','true');
+    edu.setAttribute('aria-hidden','false');
+    // scroll to top
+    window.scrollTo(0,0);
+  }, 720);
+}
+</script>
 </body>
 </html>
